@@ -1,0 +1,100 @@
+# Quiz #5 – SQL: Base de datos MiAutoPuntoCom
+
+Instituto Tecnológico de Costa Rica – Escuela de Ingeniería en Computadores
+Algoritmos y Estructuras de Datos II (CE 2103) – II Semestre 2026
+
+**Integrantes:** _(escribir nombre completo y carné de cada uno)_
+
+## Descripción
+
+Base de datos en MySQL para el sistema de información de la empresa MiAutoPuntoCom. Maneja vehículos, clientes, vendedores y las ventas que relacionan a los tres. Todos los precios están en colones costarricenses (₡).
+
+## Requisitos
+
+- MySQL Community Server (probado con MySQL 8.0 o superior; el `CHECK` solo se aplica desde la versión 8.0.16)
+- MySQL Workbench
+
+## Archivos del repositorio
+
+| Archivo | Contenido | Parte del quiz |
+|---|---|---|
+| `01_ddl_miautopuntocom.sql` | Crea la base de datos, las tablas, las restricciones y el trigger | Partes 1 y 2 |
+| `02_dml_miautopuntocom.sql` | Inserta los datos de prueba | Parte 3 |
+| `03_consultas_miautopuntocom.sql` | Las 8 consultas pedidas | Parte 4 |
+
+## Cómo ejecutarlo
+
+Los scripts se deben correr **en orden** (01, 02 y 03).
+
+### Con MySQL Workbench
+
+1. Abrir Workbench y conectarse al servidor local (la conexión `Local instance MySQL`). Pide la contraseña de `root`.
+2. Ir a `File > Open SQL Script...` y abrir `01_ddl_miautopuntocom.sql`.
+3. Ejecutarlo completo con el botón del rayo (Execute) o con `Ctrl + Shift + Enter`. En el panel Output no debe haber errores.
+4. Repetir el mismo proceso con `02_dml_miautopuntocom.sql`.
+5. Repetir con `03_consultas_miautopuntocom.sql`. Cada `SELECT` abre su propia pestaña de resultados (Result 1, Result 2, ...). Para correr una sola consulta, se selecciona y se presiona `Ctrl + Enter`.
+
+### Con la línea de comandos
+
+```bash
+mysql -u root -p < 01_ddl_miautopuntocom.sql
+mysql -u root -p < 02_dml_miautopuntocom.sql
+mysql -u root -p < 03_consultas_miautopuntocom.sql
+```
+
+### Verificar que quedó bien
+
+```sql
+USE MiAutoPuntoCom;
+SELECT COUNT(*) FROM Vehiculos;   -- 10
+SELECT COUNT(*) FROM Clientes;    -- 6
+SELECT COUNT(*) FROM Vendedores;  -- 4
+SELECT COUNT(*) FROM Ventas;      -- 8
+```
+
+> **Importante:** el script 01 empieza con `DROP DATABASE IF EXISTS MiAutoPuntoCom`, así que cada vez que se ejecuta borra la base y la crea de nuevo. Después de correrlo hay que volver a correr el 02 para cargar los datos.
+
+## Modelo de datos
+
+- **Vehiculos**: `id_vehiculo` (PK), marca, modelo, año, color, precio, VIN (único), tipo y estado (`Nuevo` o `Usado`).
+- **Clientes**: `id_cliente` (PK), nombre, apellido, cédula (única), teléfono, email (único) y dirección.
+- **Vendedores**: `id_vendedor` (PK), nombre, apellido, cédula (única), fecha de nacimiento, fecha de contratación y comisión porcentual.
+- **Ventas**: `id_venta` (PK), con llaves foráneas a `Vehiculos`, `Clientes` y `Vendedores`, más fecha de venta, precio final y método de pago (`efectivo`, `financiamiento` o `tarjeta`).
+
+## Restricciones implementadas (Parte 2)
+
+- Llaves primarias en todas las tablas.
+- Llaves foráneas en `Ventas` para mantener la integridad referencial.
+- `UNIQUE` en VIN, cédulas (clientes y vendedores) y emails. También en `id_vehiculo` de `Ventas`, para que un vehículo no se venda dos veces.
+- `CHECK`:
+  - El año del vehículo debe ser mayor o igual a 1900 y no puede ser mayor al año actual.
+  - El precio debe ser mayor a 0.
+  - La comisión del vendedor debe estar entre 0 % y 20 %.
+  - El estado del vehículo solo puede ser `Nuevo` o `Usado`.
+  - Los vendedores no pueden ser menores de 21 años.
+- `NOT NULL` en todos los campos obligatorios.
+
+### Aclaraciones
+
+- **Año del vehículo:** MySQL no permite usar `YEAR(CURDATE())` dentro de un `CHECK`. Por eso el mínimo de 1900 está en el `CHECK` y el máximo (año actual) lo valida un trigger (`trg_vehiculos_anio_ins` y `trg_vehiculos_anio_upd`). Los triggers se crean al correr el script 01.
+- **Edad del vendedor:** el enunciado no incluye fecha de nacimiento, pero se necesita para validar la edad. Por eso se agregó la columna `fecha_nacimiento` a `Vendedores`, y el `CHECK` verifica que tuviera al menos 21 años a la fecha de contratación.
+
+## Datos de prueba (Parte 3)
+
+10 vehículos (variedad de marcas, modelos y estados), 6 clientes, 4 vendedores y 8 ventas. Hay vendedores con varias ventas y dos vehículos sin vender (Hyundai Elantra y Nissan Sentra).
+
+Algunas ventas usan fechas relativas a la fecha actual (`DATE_SUB(CURDATE(), ...)`), para que la consulta del último mes siempre devuelva resultados sin importar cuándo se ejecute.
+
+## Consultas (Parte 4)
+
+| # | Consulta |
+|---|---|
+| 1 | Vehículos disponibles (no vendidos) ordenados por precio descendente |
+| 2 | Total de ventas realizadas por cada vendedor (nombre y cantidad) |
+| 3 | Ingreso total generado por cada vendedor |
+| 4 | Cliente que ha realizado la compra más costosa |
+| 5 | Vehículos vendidos en el último mes con información del cliente comprador |
+| 6 | Comisión ganada por cada vendedor según sus ventas |
+| 7 | Promedio de precios de vehículos vendidos agrupados por tipo (se muestran el precio de lista y el precio final de venta) |
+| 8 | Marca de vehículo que se ha vendido más veces |
+
